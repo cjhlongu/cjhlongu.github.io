@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    canvas{
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+</body>
+</html>
+<script>
+  /*
+  大圆位置及半径:x,y,bigRadius 大圆颜色:bigColor  小刻度线长宽:shortLineL/shortLineW
+  * 大刻度线长宽:longLineL/longLineW
+    * 秒针长宽颜色:sL sW sC
+    * 分针长宽颜色:mL mW mC
+    * 时针长宽颜色:hL hW hC
+    * canvas选择器:canvasEle
+  * */
+  function Clock(opt){
+    if(typeof opt!="object" &&opt!=null){
+      throw new Error("请传入对象参数");
+    };
+    //必填参数:
+    var mustArr="x,y,bigRadius,canvasEle".split(",");
+    mustArr.forEach(function(v){
+      if(!opt[v]){
+        throw new Error("请输入必填参数");
+      }
+    });
+    this.x=opt.x;
+    this.y=opt.y;
+    this.bigRadius=opt.bigRadius;
+    this.canvas=document.querySelector(opt.canvasEle);
+    this.ctx=this.canvas.getContext("2d");
+    //选填参数
+    var defaultArg={
+      bigColor:"red",
+      shortLineL:5,
+      shortLineW:2,
+      longLineL:10,
+      longLineW:4,
+      sL:80,
+      mL:60,
+      hL:40,
+      sW:2,
+      mW:2,
+      hW:2,
+      sC:"red",
+      mC:"blue",
+      hC:"black"
+    };
+    for(var key in defaultArg){
+      this[key]=defaultArg[key];
+    };
+    for(var key in opt){
+      this[key]=opt[key];
+    };
+    this.init();
+
+  }
+  Clock.prototype={
+    constructor:Clock,
+    init:function(){
+      var $this=this;
+      var timer=setInterval(function(){
+        $this.ctx.clearRect(0,0,$this.canvas.width,$this.canvas.height);
+        $this.drawBigCircle();
+        $this.drawTicks();
+        $this.drawNumber();
+        $this.drawPointers();
+      },1000)
+
+    },
+    //画大圆
+    drawBigCircle:function(){
+      var ctx=this.ctx;
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,this.bigRadius,0,2*Math.PI);
+      ctx.lineWidth=8;
+      ctx.strokeStyle=this.bigColor;
+      ctx.stroke();
+    },
+    //画刻度
+    drawTicks:function(){
+      var ctx=this.ctx;
+      ctx.strokeStyle="black";
+      for(var i=0;i<60;i++){
+        ctx.lineWidth=this.shortLineW;
+        var startX=(this.bigRadius-(i%5==0?this.longLineL:this.shortLineL))*Math.cos(i*2*Math.PI/60)+this.x;
+        var startY=(this.bigRadius-(i%5==0?this.longLineL:this.shortLineL))*Math.sin(i*2*Math.PI/60)+this.y;
+        var endX=(this.bigRadius-4)*Math.cos(i*2*Math.PI/60)+this.x;
+        var endY=(this.bigRadius-4)*Math.sin(i*2*Math.PI/60)+this.y;
+        ctx.beginPath();
+        ctx.moveTo(startX,startY);
+        ctx.lineTo(endX,endY);
+        i%5==0&&(ctx.lineWidth=this.longLineW);
+        ctx.stroke();
+      }
+    },
+    //画数字
+    drawNumber:function(){
+      var ctx=this.ctx;
+      for(var i=0;i<12;i++){
+        var Nx=(this.bigRadius-this.longLineL-10)*Math.cos((i-2)*2*Math.PI/12)+this.x;
+        var Ny=(this.bigRadius-this.longLineL-10)*Math.sin((i-2)*2*Math.PI/12)+this.y;
+        ctx.beginPath();
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.font="20px 微软雅黑";
+        ctx.fillText(i+1,Nx,Ny);
+      }
+    },
+    //画指针
+    drawSinglePointer:function(obj){
+      var ctx=this.ctx;
+      ctx.beginPath();
+      ctx.strokeStyle=obj.color;
+      ctx.lineWidth=obj.width;
+      ctx.moveTo(this.x,this.y);
+      ctx.lineTo(obj.endX,obj.endY);
+      ctx.stroke();
+    },
+    drawPointers:function(){
+      var _this=this;
+        var date=new Date();
+        this.ctx.fillText(date.toLocaleString(),300,50);
+        var s=date.getSeconds();
+        var m=date.getMinutes();
+        var h=date.getHours();
+        var sx= Math.cos(s*2*Math.PI/60-Math.PI/2)*(_this.sL)+_this.x;
+        var sy= Math.sin(s*2*Math.PI/60-Math.PI/2)*(_this.sL)+_this.y;
+        var mx= Math.cos((m+s/60)*2*Math.PI/60-Math.PI/2)*(_this.mL)+_this.x;
+        var my= Math.sin((m+s/60)*2*Math.PI/60-Math.PI/2)*(_this.mL)+_this.y;
+        var hx= Math.cos((h%12+m/60+s/3600)*2*Math.PI/12-Math.PI/2)*(_this.hL)+_this.x;
+        var hy= Math.sin((h%12+m/60+s/3600)*2*Math.PI/12-Math.PI/2)*(_this.hL)+_this.y;
+        //秒针
+        _this.drawSinglePointer({
+          color:_this.sC,
+          width:_this.sW,
+          endX:sx,
+          endY:sy
+        });
+        //分针
+        _this.drawSinglePointer({
+          color:_this.mC,
+          width:_this.mW,
+          endX:mx,
+          endY:my
+        });
+        //时针
+        _this.drawSinglePointer({
+          color:_this.hC,
+          width:_this.hW,
+          endX:hx,
+          endY:hy
+        });
+    }
+  }
+  var opt={
+    x:300,
+    y:300,
+    bigRadius:150,
+    bigColor:"red",
+    shortLineL:10,
+    shortLineW:4,
+    longLineL:20,
+    longLineW:8,
+    sL:120,
+    mL:100,
+    hL:80,
+    sW:2,
+    mW:4,
+    hW:6,
+    sC:"red",
+    mC:"blue",
+    hC:"black",
+    canvasEle:"#canvas"
+  }
+  new Clock(opt);
+</script>
+
+
+
+
+
+
+
+
+
